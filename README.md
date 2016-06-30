@@ -9,14 +9,16 @@ ArcGIS Pro SDK for .NET のサンプル集です。
 
 ## 動作環境
 ### ArcGIS Pro
-* ArcGIS Pro 1.1
+* ArcGIS Pro 1.2
 
 ### OS
+* Windows 10 Home, Pro, Enterprise and Education (64 bit [EM64T])
 * Windows 8.1 Basic, Professional, and Enterprise (64 bit [EM64T])
 * Windows 8 Basic, Professional, and Enterprise (64 bit [EM64T])
 * Windows 7 SP1 Ultimate, Enterprise, Professional, and Home Premium (64 bit [EM64T])
 
 ### .NET Framework
+* 4.5.6
 * 4.5.2
 * 4.5.1
 * 4.5
