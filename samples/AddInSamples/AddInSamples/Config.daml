@@ -1,0 +1,46 @@
+﻿<ArcGIS defaultAssembly="AddInSamples.dll" defaultNamespace="AddInSamples" xmlns="http://schemas.esri.com/DADF/Registry" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.esri.com/DADF/Registry file:///C:/Program%20Files/ArcGIS/Pro/bin/ArcGIS.Desktop.Framework.xsd">
+  <AddInInfo id="{6e38ed7c-9d4c-484f-bc6c-25cfc64c16a8}" version="1.0" desktopVersion="2.4.19948">
+    <Name>AddInSamples</Name>
+    <Description>AddInSamples description</Description>
+    <Image>Images\AddinDesktop32.png</Image>
+    <Author>ej2285</Author>
+    <Company>Acme</Company>
+    <Date>2019/10/18 9:26:04, 2019</Date>
+    <Subject>Framework</Subject>
+    <!-- Note subject can be one or more of these topics:
+                    Content, Framework, Editing, Geodatabase, Geometry, Geoprocessing, Layouts, Map Authoring, Map Exploration -->
+  </AddInInfo>
+  <modules>
+    <insertModule id="AddInSamples_Module" className="Module1" autoLoad="false" caption="Module1">
+      <!-- uncomment to have the control hosted on a separate tab-->
+      <tabs>
+        <!--<tab id="AddInSamples_Tab1" caption="New Tab">
+          <group refID="AddInSamples_Group1"/>
+        </tab>-->
+      </tabs>
+      <groups>
+        <!-- comment this out if you have no controls on the Addin tab to avoid
+              an empty group-->
+        <group id="AddInSamples_Group1" caption="Group 1" appearsOnAddInTab="true">
+          <!-- host controls within groups -->
+          <button refID="AddInSamples_MainDockPane_ShowButton" size="large" />
+          <!--<tool refID="AddInSamples_IdentifyFeatures" size="large" />-->
+        </group>
+      </groups>
+      <controls>
+        <!-- add your controls here -->
+        <button id="AddInSamples_MainDockPane_ShowButton" caption="機能開発" className="MainDockPane_ShowButton" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonPurple16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonPurple32.png">
+          <tooltip heading="Show Dockpane">Show Dockpane<disabledText /></tooltip>
+        </button>
+        <tool id="AddInSamples_IdentifyFeatures" caption="IdentifyFeatures" className="IdentifyFeatures" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonRed16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonRed32.png" condition="esri_mapping_mapPane">
+          <tooltip heading="Tooltip Heading">Tooltip text<disabledText /></tooltip>
+        </tool>
+      </controls>
+      <dockPanes>
+        <dockPane id="AddInSamples_MainDockPane" caption="機能開発" className="MainDockPaneViewModel" dock="group" dockWith="esri_core_contentsDockPane">
+          <content className="MainDockPaneView" />
+        </dockPane>
+      </dockPanes>
+    </insertModule>
+  </modules>
+</ArcGIS>

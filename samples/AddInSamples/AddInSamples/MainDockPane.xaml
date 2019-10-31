@@ -1,0 +1,159 @@
+﻿<UserControl x:Class="AddInSamples.MainDockPaneView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"   
+             xmlns:ui="clr-namespace:AddInSamples"
+             xmlns:extensions="clr-namespace:ArcGIS.Desktop.Extensions;assembly=ArcGIS.Desktop.Extensions"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300"
+             d:DataContext="{Binding Path=ui.MainDockPaneViewModel}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <extensions:DesignOnlyResourceDictionary Source="pack://application:,,,/ArcGIS.Desktop.Framework;component\Themes\Default.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="80*"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" LastChildFill="true" KeyboardNavigation.TabNavigation="Local" Height="30" >
+            <TextBlock Grid.Column="1" Text="{Binding Heading}" Style="{DynamicResource Esri_TextBlockDockPaneHeader}" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock.ToolTip>
+                    <WrapPanel Orientation="Vertical" MaxWidth="300">
+                        <TextBlock Text="{Binding Heading}" TextWrapping="Wrap"/>
+                    </WrapPanel>
+                </TextBlock.ToolTip>
+             </TextBlock>
+        </DockPanel>
+        <TabControl x:Name="tabControl" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" Margin="5" VerticalAlignment="Stretch" SelectedIndex="{Binding TabPage}" >
+            <TabItem Header="対話的操作">
+                <Grid Background="#FFE5E5E5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="187*"/>
+                        <ColumnDefinition Width="97*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="5,5,5,5.2" Grid.ColumnSpan="2" >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"  Text="レイヤー" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,0,15,0"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding FeatureLayers}" SelectedItem="{Binding SelectedFeatureLayer}"/>
+                        <Button Grid.Column="2" Content="選択" Command="{Binding Path= SelectionTool}"
+                                Style="{DynamicResource Esri_Button}"></Button>
+                    </Grid>
+                    <DataGrid Grid.Row="1" Margin="5,4.8,5,5"   
+                              ScrollViewer.CanContentScroll="True"      
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"        
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"                            
+                              Style="{DynamicResource Esri_DataGrid}"
+                              AutoGenerateColumns="True"
+                              HorizontalAlignment="Stretch"
+                              HeadersVisibility="Column" 
+                              RowHeaderWidth="0"
+                              IsReadOnly="True"
+                              SelectionMode="Single"
+                              SelectedItem="{Binding Path=SelectedFeature}"
+                              ItemsSource="{Binding Path=SelectedFeatureDataTable, Mode=OneWay}" Grid.ColumnSpan="2"  >
+                        <DataGrid.InputBindings>
+                            <MouseBinding MouseAction="LeftDoubleClick"
+                                          Command="{Binding Path=DataGridDoubleClick}"
+                                          CommandParameter="{Binding ElementName=myGrd, Path=SelectedFeature}" />
+                        </DataGrid.InputBindings>
+                    </DataGrid>
+                    
+
+                </Grid>
+            </TabItem>
+            <TabItem Header="レンダリング">
+                <Grid Background="#FFE5E5E5" >
+                    <Grid.ColumnDefinitions >
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0"  Text="レイヤー" VerticalAlignment="Center"  Margin="5,10,5,8.2"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" Margin="5,10,5,8.2" ItemsSource="{Binding RenderingLayers}" SelectedItem="{Binding SelectedRenderingLayer}" Grid.ColumnSpan="2"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0"  Text="フィールド" VerticalAlignment="Center"  Margin="5,10,5,8.2"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" Margin="5,10,5,8.2" ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField}" Grid.ColumnSpan="2"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0"  Text="レンダリング手法" VerticalAlignment="Center"  Margin="5,10,5,8.2"/>
+                    <ComboBox Grid.Row="2" Grid.Column="1"  Margin="5,10,5,8.2" ItemsSource="{Binding RenderingMethods}" SelectedItem="{Binding SelectedRenderingMethod}" Grid.ColumnSpan="2" />
+                    <Grid Grid.Row="3" Margin="5,4.4,5,5.6" Grid.ColumnSpan="3" >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="実行" HorizontalAlignment="Right" Grid.Column="0"  Command="{Binding Path=ExecuteRendering}"
+                                Style="{DynamicResource Esri_Button}"></Button>
+
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="アノテーション操作">
+                <Grid Background="#FFE5E5E5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="5" Margin="5" >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                            <ColumnDefinition Width="50"></ColumnDefinition>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"  Text="角度" VerticalAlignment="Center"  Margin="0,0,5,0"/>
+                        <TextBox Grid.Column="1" Margin="5,5,5,5" TextAlignment ="Right" MaxLength="4" Text="{Binding Path = Angle, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2"  Text="度" VerticalAlignment="Center"  Margin="0,0,5,0"/>
+                        <Button Content="選択" Grid.Column="3" HorizontalAlignment="Stretch" Command="{Binding Path=AnnotationAngle}"
+                                Style="{DynamicResource Esri_Button}"></Button>
+                        <Button Content="回転" Grid.Column="4" HorizontalAlignment="Stretch" Command="{Binding Path=RotateAnnotation}"
+                                Style="{DynamicResource Esri_Button}"></Button>
+                        <Button Content="コピー"  Grid.Column="5" HorizontalAlignment="Stretch" Command="{Binding Path=CopyAnnotation}"
+                                Style="{DynamicResource Esri_Button}"></Button>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="ジオメトリ変換">
+                <Grid Background="#FFE5E5E5">
+                    <Grid.ColumnDefinitions >
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0"  Text="レイヤー" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5,5,5,5"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding PolygonLayers}" SelectedItem="{Binding SelectedPolygonLayer}" Margin="5,5,5,5"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0"  Text="出力先GDB" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5,5,5,5"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding GdbPath, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5,5,5,5"/>
+                    <Button Content="開く" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Stretch" Command="{Binding Path=OpenGdbCmd}" VerticalAlignment="Center"
+                            Style="{DynamicResource Esri_Button}"></Button>
+                    <TextBlock Grid.Row="2" Grid.Column="0"  Text="フィーチャクラス名" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5,5,5,5"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FeatureClassName, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Margin="5,5,5,5"/>
+                    <Button Content="ポイント作成" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Stretch" Command="{Binding Path=CreatePoint}"
+                                Style="{DynamicResource Esri_Button}"></Button>
+
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>
