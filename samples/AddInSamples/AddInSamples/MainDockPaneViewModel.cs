@@ -206,20 +206,19 @@ namespace AddInSamples
                     }
 
                     // DataGridにカラムを設定
-                    _selectedFeatureDataTable = new DataTable();
+                    SelectedFeatureDataTable = new DataTable();
                     foreach (var col in listColumnNames)
                     {
-                        _selectedFeatureDataTable.Columns.Add(new DataColumn(col.Key, typeof(string)) { Caption = col.Value });
+                        SelectedFeatureDataTable.Columns.Add(new DataColumn(col.Key, typeof(string)) { Caption = col.Value });
                     }
+
                     // DataGridに選択したフィーチャの属性を格納
                     foreach (var row in listValues)
                     {
-                        var newRow = _selectedFeatureDataTable.NewRow();
+                        var newRow = SelectedFeatureDataTable.NewRow();
                         newRow.ItemArray = row.ToArray();
-                        _selectedFeatureDataTable.Rows.Add(newRow);
+                        SelectedFeatureDataTable.Rows.Add(newRow);
                     }
-
-                    NotifyPropertyChanged(() => SelectedFeatureDataTable);
 
                     if (_selectedFeatureDataTable.Rows.Count > 0)
                     {
