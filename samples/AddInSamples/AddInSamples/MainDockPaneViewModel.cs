@@ -164,8 +164,14 @@ namespace AddInSamples
         /// </summary>
         private void OnLayerRemoved(LayerEventsArgs args)
         {
-            // レイヤーを取得
-            GetLayers();
+            // 削除したレイヤーをコンボボックスから削除
+            foreach (var featureLayer in args.Layers.OfType<BasicFeatureLayer>().ToList())
+            {
+                if (_featureLayers.Contains(featureLayer))
+                {
+                    FeatureLayers.Remove(featureLayer);
+                }
+            }
 
             // DataGridをクリアして選択しているフィーチャを解除
             Clear();
