@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
+using ArcGIS.Core.Events;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Catalog;
 using ArcGIS.Desktop.Core;
@@ -26,18 +27,41 @@ namespace AddInSamples
     {
         private const string _dockPaneID = "AddInSamples_MainDockPane";
 
+        #region 起動時
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         protected MainDockPaneViewModel()
         {
             // 選択ボタンを押すとExecuteSelectionTool()が実行される
             _selectionTool = new RelayCommand(() => ExecuteSelectionTool(), () => true);
 
             // イベントの登録
-            MapSelectionChangedEvent.Subscribe(OnMapSelectionChanged);
             ActiveMapViewChangedEvent.Subscribe(OnActiveMapViewChanged);
             LayersAddedEvent.Subscribe(OnLayerAdded);
             LayersRemovedEvent.Subscribe(OnLayerRemoved);
         }
 
+        /// <summary>
+        /// ドッキングウインドウの表示/非表示でイベントを登録/解除
+        /// </summary>
+        private SubscriptionToken _mapSelectionChangedEvent = null;
+        protected override void OnShow(bool isVisible)
+        {
+            if (isVisible && _mapSelectionChangedEvent == null)
+            {
+                // イベントの登録
+                _mapSelectionChangedEvent = MapSelectionChangedEvent.Subscribe(OnMapSelectionChanged);
+            }
+
+            if (!isVisible && _mapSelectionChangedEvent != null)
+            {
+                // イベントの解除
+                MapSelectionChangedEvent.Unsubscribe(_mapSelectionChangedEvent);
+                _mapSelectionChangedEvent = null;
+            }
+        }
+        
         /// <summary>
         /// 初期化
         /// </summary>
@@ -46,6 +70,7 @@ namespace AddInSamples
             GetLayers();
             return base.InitializeAsync();
         }
+        #endregion
 
         #region コマンド（マップとの対話的操作）
         /// <summary>
