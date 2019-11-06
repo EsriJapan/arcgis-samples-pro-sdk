@@ -9,23 +9,19 @@ ArcGIS Pro SDK for .NET のサンプル集です。
 
 ## 動作環境
 ### ArcGIS Pro
-* ArcGIS Pro 1.2
+* ArcGIS Pro 2.4
 
 ### OS
 * Windows 10 Home, Pro, Enterprise and Education (64 bit [EM64T])
 * Windows 8.1 Basic, Professional, and Enterprise (64 bit [EM64T])
-* Windows 8 Basic, Professional, and Enterprise (64 bit [EM64T])
 * Windows 7 SP1 Ultimate, Enterprise, Professional, and Home Premium (64 bit [EM64T])
 
 ### .NET Framework
-* 4.5.6
-* 4.5.2
-* 4.5.1
-* 4.5
+* Microsoft .NET Framework 4.6.1以上
 
 ### 開発環境
-* Microsoft Visual Studio 2015 (Professional, Enterprise, and Community Editions)
-* Microsoft Visual Studio 2013 (Professional, Premium, Ultimate, and Community Editions)
+* Visual Studio 2019 (Professional, Enterprise, and Community Editions)
+* Visual Studio 2017 (Professional, Enterprise, and Community Editions)
 
 ## ArcGIS Pro SDK for .NET の基本操作
 *  [アドイン作成の基本手順](https://github.com/EsriJapan/arcgis-samples-pro-sdk/wiki/%E3%82%A2%E3%83%89%E3%82%A4%E3%83%B3%E4%BD%9C%E6%88%90%E3%81%AE%E5%9F%BA%E6%9C%AC%E6%89%8B%E9%A0%86)
