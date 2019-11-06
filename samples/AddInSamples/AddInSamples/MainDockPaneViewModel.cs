@@ -59,6 +59,9 @@ namespace AddInSamples
                 // イベントの解除
                 MapSelectionChangedEvent.Unsubscribe(_mapSelectionChangedEvent);
                 _mapSelectionChangedEvent = null;
+
+                // DataGridをクリアして選択しているフィーチャを解除
+                Clear();
             }
         }
         
@@ -256,7 +259,10 @@ namespace AddInSamples
                         // ズーム
                         ZoomToSelection();
                     }
-                        
+
+                    // データが多い場合たまにDataGridにデータが表示されないことがある。これで回避。
+                    NotifyPropertyChanged(() => SelectedFeatureDataTable);
+
                 }
                 catch (Exception)
                 {
