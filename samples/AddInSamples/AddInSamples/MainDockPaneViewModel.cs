@@ -60,8 +60,6 @@ namespace AddInSamples
                 MapSelectionChangedEvent.Unsubscribe(_mapSelectionChangedEvent);
                 _mapSelectionChangedEvent = null;
 
-                // DataGridをクリアして選択しているフィーチャを解除
-                Clear();
             }
         }
         
@@ -282,11 +280,8 @@ namespace AddInSamples
             // アクティブなマップビューを取得
             var mapView = MapView.Active;
             if (mapView == null)
-            {
-                FeatureLayers.Clear();
                 return;
-            }
-                
+
             // コンボボックスに格納されているレイヤーをクリア
             FeatureLayers.Clear();
 
