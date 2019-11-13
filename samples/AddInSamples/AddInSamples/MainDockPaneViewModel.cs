@@ -25,7 +25,25 @@ namespace AddInSamples
 {
     internal class MainDockPaneViewModel : DockPane
     {
+        #region Private Properties
         private const string _dockPaneID = "AddInSamples_MainDockPane";
+
+        // マップツール
+        private RelayCommand _selectionTool;
+
+        // イベント登録/解除用トークン
+        private SubscriptionToken _mapSelectionChangedEvent = null;
+        
+        // レイヤー コンボ ボックス
+        private ObservableCollection<BasicFeatureLayer> _featureLayers = new ObservableCollection<BasicFeatureLayer>();
+        private BasicFeatureLayer _selectedFeatureLayer;
+
+        // DataGrid
+        private DataTable _selectedFeatureDataTable;
+
+        // タブ
+        private int _tabPage;
+        #endregion Private Properties
 
         #region 起動時
         /// <summary>
@@ -45,7 +63,6 @@ namespace AddInSamples
         /// <summary>
         /// ドッキングウインドウの表示/非表示でイベントを登録/解除
         /// </summary>
-        private SubscriptionToken _mapSelectionChangedEvent = null;
         protected override void OnShow(bool isVisible)
         {
             if (isVisible && _mapSelectionChangedEvent == null)
@@ -77,7 +94,6 @@ namespace AddInSamples
         /// <summary>
         /// フィーチャ選択ボタン（マップツールを使用）
         /// </summary>
-        private RelayCommand _selectionTool;
         public ICommand SelectionTool => _selectionTool;
         internal static void ExecuteSelectionTool()
         {
@@ -93,7 +109,6 @@ namespace AddInSamples
         /// <summary>
         /// レイヤー コンボ ボックス
         /// </summary>
-        private ObservableCollection<BasicFeatureLayer> _featureLayers = new ObservableCollection<BasicFeatureLayer>();
         public ObservableCollection<BasicFeatureLayer> FeatureLayers
         {
             get { return _featureLayers; }
@@ -106,7 +121,6 @@ namespace AddInSamples
         /// <summary>
         /// レイヤー コンボ ボックスで選択しているレイヤー
         /// </summary>
-        private BasicFeatureLayer _selectedFeatureLayer;
         public BasicFeatureLayer SelectedFeatureLayer
         {
             get { return _selectedFeatureLayer; }
@@ -121,7 +135,6 @@ namespace AddInSamples
         /// <summary>
         /// DataGrid
         /// </summary>
-        private DataTable _selectedFeatureDataTable;
         public DataTable SelectedFeatureDataTable
         {
             get { return _selectedFeatureDataTable; }
@@ -134,8 +147,6 @@ namespace AddInSamples
         /// <summary>
         /// タブ
         /// </summary>
-        private int _tabPage;
-
         public int TabPage
         {
             get { return _tabPage; }
@@ -144,7 +155,6 @@ namespace AddInSamples
                 SetProperty(ref _tabPage, value, () => TabPage);
             }
         }
-
         #endregion
 
         #region イベントハンドラー
@@ -333,8 +343,6 @@ namespace AddInSamples
         }
         #endregion
 
-
-
         /// <summary>
         /// Show the DockPane.
         /// </summary>
@@ -346,8 +354,6 @@ namespace AddInSamples
 
             pane.Activate();
         }
-
-        
 
         /// <summary>
         /// Text shown near the top of the DockPane.
