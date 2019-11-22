@@ -40,6 +40,7 @@ namespace AddInSamples
 
         // DataGrid
         private DataTable _selectedFeatureDataTable;
+        private ICommand _dataGridDoubleClick;
 
         // タブ
         private int _tabPage;
@@ -53,6 +54,9 @@ namespace AddInSamples
         {
             // 選択ボタンを押すとExecuteSelectionTool()が実行される
             _selectionTool = new RelayCommand(() => ExecuteSelectionTool(), () => true);
+
+            // DataDridをダブルクリックするとExecuteDataGridDoubleClick()が実行される
+            _dataGridDoubleClick = new RelayCommand(() => ExecuteDataGridDoubleClick(), () => true);
 
             // イベントの登録
             ActiveMapViewChangedEvent.Subscribe(OnActiveMapViewChanged);
@@ -102,6 +106,21 @@ namespace AddInSamples
             if (cmd.CanExecute(null))
                 // マップツール起動
                 cmd.Execute(null);
+        }
+
+        /// <summary>
+        /// DataGridをダブルクリック時にフィーチャにズーム
+        /// </summary>
+        public ICommand DataGridDoubleClick => _dataGridDoubleClick;
+        private void ExecuteDataGridDoubleClick()
+        {
+            QueuedTask.Run(() =>
+            {
+                var oid = _selectedFeature.Row["ObjectId"];
+                // 選択フィーチャにズーム
+                MapView.Active.ZoomTo(_selectedFeatureLayer, Convert.ToInt64(oid), TimeSpan.Zero, false);
+
+            });
         }
         #endregion
 
@@ -155,6 +174,29 @@ namespace AddInSamples
                 SetProperty(ref _tabPage, value, () => TabPage);
             }
         }
+
+        /// <summary>
+        /// フィーチャの選択
+        /// <summary>
+        private DataRowView _selectedFeature = null;
+        public DataRowView SelectedFeature
+        {
+            get
+            {
+                return _selectedFeature;
+            }
+            set
+            {
+                SetProperty(ref _selectedFeature, value, () => SelectedFeature);
+
+                if (_selectedFeature == null || SelectedFeatureLayer == null)
+                    return;
+                // フィーチャの強調
+                FlashFeatures(Convert.ToInt64(_selectedFeature.Row["ObjectId"]));
+            }
+        }
+
+
         #endregion
 
         #region イベントハンドラー
@@ -340,6 +382,157 @@ namespace AddInSamples
                 // 選択したフィーチャにズーム
                 mapView.ZoomTo(selection, true);
             });
+        }
+        #endregion
+
+        #region グラフィックの作成
+        /// <summary>
+        /// グラフィックの作成
+        /// </summary>
+        private void CreateGraphic(FeatureClass featureClass, QueryFilter queryFilter)
+        {
+            var mapView = MapView.Active;
+
+            using (RowCursor rowCursor = featureClass.Search(queryFilter, true))
+            {
+                rowCursor.MoveNext();
+
+                //レコードを取得
+                using (Row row = rowCursor.Current)
+                {
+                    Feature feature = row as Feature;
+                    Geometry shape = feature.GetShape();
+
+                    RemoveFromMapOverlay(); // 既存のグラフィックを削除
+
+                    switch (shape.GeometryType)
+                    {
+                        // ポイントの場合(マルチには対応していません)
+                        case GeometryType.Point:
+                            // ポイント作成
+                            var point = shape as MapPoint;
+                            MapPoint mapPoint = MapPointBuilder.CreateMapPoint(point.X, point.Y, shape.SpatialReference);
+
+                            // グラフィック作成
+                            var pointGraphic = new CIMPointGraphic();
+                            pointGraphic.Location = mapPoint;
+
+                            // シンボル作成
+                            CIMPointSymbol pointSymbol = SymbolFactory.Instance.ConstructPointSymbol(ColorFactory.Instance.RedRGB, 5);
+                            pointGraphic.Symbol = pointSymbol.MakeSymbolReference();
+
+                            // グラフィックをマップビューに追加
+                            _overlayObject = mapView.AddOverlay(pointGraphic);
+
+                            break;
+
+                        case GeometryType.Polygon:
+
+                            // アノテーションの場合
+                            if (feature.GetType().Name == "AnnotationFeature")
+                            {
+                                // グラフィック作成
+                                var annoGraphic = new CIMPolygonGraphic();
+                                annoGraphic.Polygon = shape as Polygon;
+
+                                // シンボル作成
+                                CIMStroke outline = SymbolFactory.Instance.ConstructStroke(ColorFactory.Instance.RedRGB, 2, SimpleLineStyle.Solid);
+                                CIMPolygonSymbol polygonSymbol = SymbolFactory.Instance.ConstructPolygonSymbol(ColorFactory.Instance.BlueRGB, SimpleFillStyle.Null, outline);
+                                annoGraphic.Symbol = polygonSymbol.MakeSymbolReference();
+
+                                // グラフィックをマップビューに追加
+                                _overlayObject = mapView.AddOverlay(annoGraphic);
+                            }
+                            else
+                            {
+                                // グラフィック作成
+                                var polygonGraphic = new CIMPolygonGraphic();
+                                polygonGraphic.Polygon = shape as Polygon;
+
+                                // シンボル作成
+                                CIMPolygonSymbol polygonSymbol = SymbolFactory.Instance.ConstructPolygonSymbol(ColorFactory.Instance.RedRGB);
+                                polygonGraphic.Symbol = polygonSymbol.MakeSymbolReference();
+
+                                // グラフィックをマップビューに追加
+                                _overlayObject = mapView.AddOverlay(polygonGraphic);
+                            }
+
+                            break;
+
+                        case GeometryType.Polyline:
+
+                            // グラフィック作成
+                            var lineGraphic = new CIMLineGraphic();
+                            lineGraphic.Line = shape as Polyline;
+
+                            // シンボル作成
+                            CIMLineSymbol lineSymbol = SymbolFactory.Instance.ConstructLineSymbol(ColorFactory.Instance.RedRGB, 5);
+                            lineGraphic.Symbol = lineSymbol.MakeSymbolReference();
+
+                            // グラフィックをマップビューに追加
+                            _overlayObject = mapView.AddOverlay(lineGraphic);
+
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// フィーチャの強調
+        /// </summary>
+        private void FlashFeatures(long oid)
+        {
+            var mapView = MapView.Active;
+            if (mapView == null)
+                return;
+
+            QueryFilter queryFilter = new QueryFilter
+            {
+                WhereClause = "ObjectId =" + oid,
+            };
+
+            try
+            {
+                QueuedTask.Run(() =>
+                {
+
+                    var annotationLayer = _selectedFeatureLayer as AnnotationLayer;
+                    // アノテーションの場合
+                    if (annotationLayer != null)
+                    {
+                        CreateGraphic(annotationLayer.GetFeatureClass(), queryFilter);
+                    }
+                    // アノテーションでない場合
+                    else
+                    {
+                        var featureLayer = _selectedFeatureLayer as FeatureLayer;
+                        CreateGraphic(featureLayer.GetFeatureClass(), queryFilter);
+                    }
+                });
+            }
+            catch
+            {
+                MessageBox.Show("フィーチャの強調に失敗しました。");
+            }
+
+        }
+
+        /// <summary>
+        /// 既存のグラフィックを削除
+        /// </summary>
+        private static System.IDisposable _overlayObject = null;
+        private void RemoveFromMapOverlay()
+        {
+            if (_overlayObject != null)
+            {
+                _overlayObject.Dispose();
+                _overlayObject = null;
+            }
         }
         #endregion
 
