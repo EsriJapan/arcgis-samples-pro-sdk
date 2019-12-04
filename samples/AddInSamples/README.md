@@ -9,7 +9,7 @@
 ### 連載予定
  * [第1回：マップとの対話的な操作その１](https://community.esri.com/docs/DOC-14197)
  * [第2回：マップとの対話的な操作その２](https://community.esri.com/docs/DOC-14326)
- * 第3回：レンダリング（未公開）
+ * [第3回：レンダラーの設定](https://community.esri.com/docs/DOC-14273)
  * 第4回：アノテーション操作（未公開）
  * 第5回：ジオメトリ変換（未公開）
 
