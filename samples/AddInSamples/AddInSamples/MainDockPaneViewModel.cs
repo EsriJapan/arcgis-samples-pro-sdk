@@ -44,6 +44,22 @@ namespace AddInSamples
 
         // タブ
         private int _tabPage;
+
+
+        // レンダリング：レイヤー コンボボックス
+        private ObservableCollection<FeatureLayer> _renderingLayers = new ObservableCollection<FeatureLayer>();
+        private FeatureLayer _selectedRenderingLayer;
+        // レンダリング：フィールド コンボボックス
+        private List<String> _fields = new List<String>();
+        private string _selectedField;
+        // レンダリング：レンダリング手法 コンボボックス
+        private ObservableCollection<string> _renderingMethods = new ObservableCollection<string>
+        {
+            "個別値レンダリング",
+            "等級色レンダリング"
+        };
+        private string _selectedRenderingMethod;
+        private ICommand _executeRendering;
         #endregion Private Properties
 
         #region 起動時
@@ -57,6 +73,9 @@ namespace AddInSamples
 
             // DataDridをダブルクリックするとExecuteDataGridDoubleClick()が実行される
             _dataGridDoubleClick = new RelayCommand(() => ExecuteDataGridDoubleClick(), () => true);
+
+            // レンダリング タブの実行ボタンを押すと ExecuteRenderingClick() が実行される
+            _executeRendering = new RelayCommand(() => ExecuteRenderingClick(), () => true);
 
             // イベントの登録
             ActiveMapViewChangedEvent.Subscribe(OnActiveMapViewChanged);
@@ -123,6 +142,94 @@ namespace AddInSamples
             });
         }
         #endregion
+
+        #region コマンド（レンダリング）
+        /// <summary>
+        /// 実行ボタンをクリック
+        /// </summary>
+        public ICommand ExecuteRendering => _executeRendering;
+        private void ExecuteRenderingClick()
+        {
+
+            // コンボ ボックスでレイヤー、フィールド、レンダリング手法が選択されているかをチェックする
+            if (_selectedRenderingLayer is null)
+            {
+                MessageBox.Show("レイヤーを選択してください。");
+            }
+            else if (_selectedField is null)
+            {
+                MessageBox.Show("フィールドを選択してください。");
+            }
+            else if (_selectedRenderingMethod is null)
+            {
+                MessageBox.Show("レンダリング手法を選択してください。");
+            }
+            else
+            {
+                try
+                {
+                    // レンダラー作成の処理を実装
+                    QueuedTask.Run(() =>
+                    {
+
+                        // レイヤー名で検索してマップ上のレイヤーを取得する
+                        var lyr = MapView.Active.Map.FindLayers(_selectedRenderingLayer.Name).FirstOrDefault() as FeatureLayer;
+
+                        // 「ArcGIS カラー」（ArcGIS Pro の表示言語が英語の場合は、「ArcGIS Colors」を指定）プロジェクト スタイル アイテムを取得
+                        StyleProjectItem style = Project.Current.GetItems<StyleProjectItem>().FirstOrDefault(s => s.Name == "ArcGIS カラー");
+
+                        // 名前で検索してカラーランプ アイテムを取得する（ArcGIS Pro の表示言語が英語の場合は、「Spectrum - Full Light」を指定）
+                        IList<ColorRampStyleItem> colorRampList = style.SearchColorRamps("フル スペクトル (明るい)");
+
+                        if (_selectedRenderingMethod == "個別値レンダリング")
+                        {
+
+                            // 個別値レンダラーの定義を作成する
+                            UniqueValueRendererDefinition uvrDef = new
+                                UniqueValueRendererDefinition()
+                            {
+                                ValueFields = new String[] { _selectedField },　// 分類に使用するフィールド
+                                ColorRamp = colorRampList[0].ColorRamp, // カラーランプ
+                            };
+
+                            // 個別値レンダラーを作成する
+                            CIMUniqueValueRenderer cimRenderer = (CIMUniqueValueRenderer)lyr.CreateRenderer(uvrDef);
+                            // レンダラーをレイヤーに設定する
+                            lyr.SetRenderer(cimRenderer);
+
+                        }
+                        else // 等級色レンダリングの場合
+                        {
+                            if (GetNumericField(lyr, _selectedField)) // 数値型のフィールドを選択している場合のみ実行する
+                            {
+                                // 等級色レンダラーの定義を作成する
+                                GraduatedColorsRendererDefinition gcDef = new GraduatedColorsRendererDefinition()
+                                {
+                                    ClassificationField = _selectedField,　// 分類に使用するフィールド
+                                    ColorRamp = colorRampList[0].ColorRamp, // カラーランプ
+                                    ClassificationMethod = ClassificationMethod.NaturalBreaks, // 分類方法（自然分類）
+                                    BreakCount = 5, // 分類数（5段階で分類）
+                                };
+
+                                // 等級色（クラス分類）レンダラーを作成する
+                                CIMClassBreaksRenderer cimClassBreakRenderer = (CIMClassBreaksRenderer)lyr.CreateRenderer(gcDef);
+                                // レンダラーをレイヤーに設定する
+                                lyr.SetRenderer(cimClassBreakRenderer);
+                            }
+                        }
+
+                    });
+                }
+                catch (Exception)
+                {
+                    MessageBox.Show("レンダリングに失敗しました。");
+                }
+
+            }
+
+        }
+        #endregion
+
 
         #region バインド用のプロパティ（マップとの対話的操作）
         /// <summary>
@@ -198,6 +305,91 @@ namespace AddInSamples
 
 
         #endregion
+
+
+        #region バインド用のプロパティ（レンダラリング）
+        /// <summary>
+        /// レイヤー コンボ ボックス
+        /// </summary>
+        public ObservableCollection<FeatureLayer> RenderingLayers
+        {
+            get { return _renderingLayers; }
+            set
+            {
+                SetProperty(ref _renderingLayers, value, () => RenderingLayers);
+            }
+        }
+
+        /// <summary>
+        /// レイヤー コンボ ボックスで選択しているレイヤー
+        /// </summary>
+        public FeatureLayer SelectedRenderingLayer
+        {
+            get { return _selectedRenderingLayer; }
+            set
+            {
+                SetProperty(ref _selectedRenderingLayer, value, () => SelectedRenderingLayer);
+
+                if (_selectedRenderingLayer == null)
+                {
+                    Fields = null;
+                    SelectedRenderingMethod = null;
+                    return;
+                }
+
+                GetFields();
+            }
+        }
+
+        /// <summary>
+        /// フィールド コンボ ボックス
+        /// </summary>
+        public List<String> Fields
+        {
+            get { return _fields; }
+            set
+            {
+                SetProperty(ref _fields, value, () => Fields);
+            }
+        }
+
+        /// <summary>
+        /// フィールド コンボ ボックスで選択しているフィールド
+        /// </summary>
+        public string SelectedField
+        {
+            get { return _selectedField; }
+            set
+            {
+                SetProperty(ref _selectedField, value, () => SelectedField);
+            }
+        }
+
+        /// <summary>
+        /// レンダリング手法コンボ ボックス
+        /// </summary>
+        public ObservableCollection<string> RenderingMethods
+        {
+            get
+            {
+                return _renderingMethods;
+            }
+            set { SetProperty(ref _renderingMethods, value, () => RenderingMethods); }
+        }
+
+        /// <summary>
+        /// レンダリング手法コンボ ボックスで選択しているレンダリング手法
+        /// </summary>
+        public string SelectedRenderingMethod
+        {
+            get { return _selectedRenderingMethod; }
+            set
+            {
+                SetProperty(ref _selectedRenderingMethod, value, () => SelectedRenderingMethod);
+            }
+        }
+        #endregion
+
 
         #region イベントハンドラー
         /// <summary>
@@ -336,12 +528,19 @@ namespace AddInSamples
 
             // コンボボックスに格納されているレイヤーをクリア
             FeatureLayers.Clear();
+            RenderingLayers.Clear();
 
             // レイヤーコンボボックスにレイヤーを格納
             foreach (var featureLayer in mapView.Map.Layers.OfType<BasicFeatureLayer>())
             {
                 FeatureLayers.Add(featureLayer);
             }
+
+            // レンダリング タブのレイヤー コンボボックスにレイヤーを格納
+            var renderingLayers = MapView.Active.Map.Layers.OfType<BasicFeatureLayer>().Where(f => f.GetType().Name != "AnnotationLayer");
+            RenderingLayers.Clear();
+            foreach (var renderingLayer in renderingLayers.Where(f => f.GetType().Name != "AnnotationLayer")) RenderingLayers.Add(renderingLayer as FeatureLayer);
+
         }
 
         /// <summary>
@@ -535,6 +734,68 @@ namespace AddInSamples
             }
         }
         #endregion
+
+        #region フィールドの取得（レンダリング）
+        /// <summary>
+        /// コンボボックスで選択したレイヤーのフィールド名のリストを取得
+        /// </summary>
+        private void GetFields()
+        {
+            // アクティブ（選択状態）なマップを取得する
+            var mapView = MapView.Active;
+
+            if (mapView == null || _selectedRenderingLayer == null)
+                return;
+
+            // レイヤーの属性テーブルにアクセスして、フィールド名を Fields 配列に格納する　
+            QueuedTask.Run(() =>
+            {
+                // レイヤー名で検索してマップ上のレイヤーを取得する
+                var featureLayer = MapView.Active.Map.FindLayers(_selectedRenderingLayer.Name).FirstOrDefault() as FeatureLayer;
+                var flf = featureLayer.GetTable().GetDefinition().GetFields();
+
+                // 文字列型または数値型のフィールドのフィールド名を抽出する
+                Fields = flf.Where(f => f.FieldType == FieldType.Integer | f.FieldType == FieldType.SmallInteger | f.FieldType == FieldType.String | f.FieldType == FieldType.Double).Select(f => f.Name).ToList();
+
+            });
+        }
+        #endregion
+
+        #region 数値フィールドの抽出（レンダリング）
+        /// <summary>
+        /// 等級色レンダリングの場合に数値フィールドのみを返す
+        /// </summary>
+        internal static bool IsNumericFieldType(FieldType type)
+        {
+            switch (type)
+            {
+                // 以下のフィールドタイプのみを許容する
+                case FieldType.Double:
+                case FieldType.Integer:
+                case FieldType.Single:
+                case FieldType.SmallInteger:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        internal static bool GetNumericField(FeatureLayer featureLayer, string field)
+        {
+            // 数値型のフィールドか確認する
+            IEnumerable<FieldDescription> numericField = featureLayer.GetFieldDescriptions().Where(f => IsNumericFieldType(f.Type) && f.Name == field);
+
+            if (numericField.Any())
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        #endregion
+
 
         /// <summary>
         /// Show the DockPane.
