@@ -2,17 +2,22 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using System.Windows.Input;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
+using ArcGIS.Core.Data.Mapping;
 using ArcGIS.Core.Events;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Catalog;
 using ArcGIS.Desktop.Core;
+using ArcGIS.Desktop.Core.Geoprocessing;
 using ArcGIS.Desktop.Editing;
+using ArcGIS.Desktop.Editing.Attributes;
 using ArcGIS.Desktop.Extensions;
 using ArcGIS.Desktop.Framework;
 using ArcGIS.Desktop.Framework.Contracts;
@@ -76,6 +81,13 @@ namespace AddInSamples
 
             // レンダリング タブの実行ボタンを押すと ExecuteRenderingClick() が実行される
             _executeRendering = new RelayCommand(() => ExecuteRenderingClick(), () => true);
+
+            // アノテーション タブの選択ボタンを押すと ExexuteAnnotationAngle() が実行される
+            _annotationAngle = new RelayCommand(() => ExexuteAnnotationAngle(), () => true);
+            // アノテーション タブの回転ボタンを押すと ExecuteRotateAnnotation() が実行される
+            _rotateAnnotation = new RelayCommand(() => ExecuteRotateAnnotation(), () => true);
+            // アノテーション タブのコピーボタンを押すと ExecuteCopyAnnotation() が実行される
+            _copyAnnotation = new RelayCommand(() => ExecuteCopyAnnotation(), () => true);
 
             // イベントの登録
             ActiveMapViewChangedEvent.Subscribe(OnActiveMapViewChanged);
@@ -230,6 +242,186 @@ namespace AddInSamples
         }
         #endregion
 
+        #region コマンド（アノテーションの選択）
+        /// <summary>
+        /// アノテーション操作タブの選択ボタンをクリック
+        /// </summary>
+        private ICommand _annotationAngle;
+        public ICommand AnnotationAngle => _annotationAngle;
+        public void ExexuteAnnotationAngle()
+        {
+            var cmd = FrameworkApplication.GetPlugInWrapper("AddInSamples_IdentifyFeatures") as ICommand;
+            if (cmd.CanExecute(null))
+                cmd.Execute(null);
+        }
+        #endregion
+
+        #region コマンド（アノテーションの回転）
+        /// <summary>
+        /// アノテーション操作タブの回転ボタンをクリック
+        /// </summary>
+        // アノテーションの回転
+        private ICommand _rotateAnnotation;
+        public ICommand RotateAnnotation => _rotateAnnotation;
+        private void ExecuteRotateAnnotation()
+        {
+            var mapView = MapView.Active;
+
+            if (mapView == null)
+                return;
+
+
+            try
+            {
+                QueuedTask.Run(() =>
+                {
+                    var selection = mapView.Map.GetSelection();
+
+                    // 選択しているフィーチャクラスがある場合
+                    if (selection.Count > 0)
+                    {
+                        var editOperation = new EditOperation();
+
+                        // フィーチャクラスごとにループ
+                        foreach (var mapMember in selection)
+                        {
+                            var layer = mapMember.Key as BasicFeatureLayer;
+
+                            // アノテーションの場合
+                            if (layer.GetType().Name == "AnnotationLayer")
+                            {
+                                using (var rowCursor = layer.GetSelection().Search(null))
+                                {
+                                    var inspector = new Inspector();
+
+                                    while (rowCursor.MoveNext())
+                                    {
+                                        using (var row = rowCursor.Current)
+                                        {
+                                            // 角度更新
+                                            inspector.Load(layer, row.GetObjectID());
+                                            var annoProperties = inspector.GetAnnotationProperties();
+                                            annoProperties.Angle = _angle;
+                                            inspector.SetAnnotationProperties(annoProperties);
+
+                                            editOperation.Modify(inspector);
+                                        }
+                                    }
+                                }
+
+                            }
+
+                        }
+
+                        editOperation.Execute();
+                    }
+                });
+            }
+            catch
+            {
+                MessageBox.Show("アノテーションの角度変更に失敗しました。");
+            }
+                   
+        }
+        #endregion
+
+        #region コマンド（アノテーションのコピー）
+                private ICommand _copyAnnotation;
+        public ICommand CopyAnnotation => _copyAnnotation;
+        private void ExecuteCopyAnnotation()
+        {
+            var mapView = MapView.Active;
+
+            if (mapView == null)
+                return;
+
+            try
+            {
+                QueuedTask.Run(() =>    
+                {
+                    var selection = mapView.Map.GetSelection();
+
+                    // 選択しているフィーチャクラスがある場合
+                    if (selection.Count > 0)
+                    {
+                        // フィーチャクラスごとにループ
+                        foreach (var mapMember in selection)
+                        {
+                            var featureLayer = mapMember.Key as BasicFeatureLayer;
+
+                            // アノテーションの場合
+                            if (featureLayer.GetType().Name == "AnnotationLayer")
+                            {
+                                using (var rowCursor = featureLayer.GetSelection().Search(null))
+                                {
+                                    while (rowCursor.MoveNext())
+                                    {
+                                        using (var annofeat = rowCursor.Current as AnnotationFeature)
+                                        {
+                                            // コピー処理
+                                            InsertAnnotation(annofeat);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        mapView.Redraw(true);
+
+                    }
+                });
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("アノテーションのコピーに失敗しました。");
+            }
+        }
+
+
+        private void InsertAnnotation(AnnotationFeature annofeat)
+        {
+            var selectedFeatures = MapView.Active.Map.GetSelection().Where(kvp => kvp.Key is AnnotationLayer).ToDictionary(kvp => (AnnotationLayer)kvp.Key, kvp => kvp.Value);
+            var layer = selectedFeatures.Keys.FirstOrDefault();
+
+            // コピーするアノテーション用に行を作成
+            AnnotationFeatureClass annotationFeatureClass = layer.GetFeatureClass() as AnnotationFeatureClass;
+            RowBuffer rowBuffer = annotationFeatureClass.CreateRowBuffer();
+            Feature feature = annotationFeatureClass.CreateRow(rowBuffer) as Feature;
+
+            // コピーするアノテーションを作成
+            AnnotationFeature copyAnnoFeat = feature as AnnotationFeature;
+            copyAnnoFeat.SetStatus(AnnotationStatus.Placed);
+            copyAnnoFeat.SetAnnotationClassID(0);
+
+            // コピー元のアノテーションの重心にポイントを作成
+            Envelope shape = annofeat.GetShape().Extent;
+            var x = shape.Center.X;
+            var y = shape.Center.Y;
+            var mapPointBuilder = new MapPointBuilder(layer.GetSpatialReference());
+            mapPointBuilder.X = x;
+            mapPointBuilder.Y = y;
+            MapPoint mapPoint = mapPointBuilder.ToGeometry();
+
+            // コピー元のアノテーションのテキストを作成
+            var annoGraphich = annofeat.GetGraphic() as CIMTextGraphic;
+
+            // 作成したポイントとアノテーションをコピー先のアノテーションにコピー
+            CIMTextGraphic cimTextGraphic = new CIMTextGraphic();
+            cimTextGraphic.Text = annoGraphich.Text;
+            cimTextGraphic.Shape = mapPoint;
+
+            // シンボル設定
+            var symbolRef = new CIMSymbolReference();
+            symbolRef.SymbolName = annoGraphich.Symbol.SymbolName;
+            symbolRef.Symbol = annoGraphich.Symbol.Symbol;
+            cimTextGraphic.Symbol = symbolRef;
+
+            // コピー
+            copyAnnoFeat.SetGraphic(cimTextGraphic);
+            copyAnnoFeat.Store();
+            
+        }
+        #endregion
 
         #region バインド用のプロパティ（マップとの対話的操作）
         /// <summary>
@@ -306,8 +498,7 @@ namespace AddInSamples
 
         #endregion
 
-
-        #region バインド用のプロパティ（レンダラリング）
+        #region バインド用のプロパティ（レンダリング）
         /// <summary>
         /// レイヤー コンボ ボックス
         /// </summary>
@@ -390,6 +581,21 @@ namespace AddInSamples
         }
         #endregion
 
+        #region バインド用のプロパティ（アノテーションの操作）
+        /// <summary>
+        /// テキスト ボックスに格納される角度
+        /// </summary>
+        private double _angle;
+
+        public double Angle
+        {
+            get { return _angle; }
+            set
+            {
+                SetProperty(ref _angle, value, () => Angle);
+            }
+        }
+        #endregion
 
         #region イベントハンドラー
         /// <summary>
@@ -443,74 +649,119 @@ namespace AddInSamples
             if (mapView == null)
                 return;
 
-            QueuedTask.Run(() =>
+            RemoveFromMapOverlay();
+
+            // アノテーション操作タブの場合
+            if (_tabPage == 2)
             {
-                // レイヤーを選択していない場合
-                if (_selectedFeatureLayer == null)
-                    return;
-
-                try
+                QueuedTask.Run(() =>
                 {
-                    var listColumnNames = new List<KeyValuePair<string, string>>();
-                    var listValues = new List<List<string>>();
+                    var selection = mapView.Map.GetSelection();
 
-                    // 選択したフィーチャを処理する
-                    using (var rowCursor = _selectedFeatureLayer.GetSelection().Search(null))
+                    // 選択しているフィーチャクラスがある場合
+                    if (selection.Count > 0)
                     {
-                        bool bDefineColumns = true;
-                        while (rowCursor.MoveNext())
+                        var featureLayer = selection.FirstOrDefault().Key as BasicFeatureLayer;
+
+                        // アノテーションの場合
+                        if (featureLayer.GetType().Name == "AnnotationLayer")
                         {
-                            var anyRow = rowCursor.Current;
-                            if (bDefineColumns)
+                            var table = featureLayer.GetTable();
+                            var feature = featureLayer.GetSelection();
+
+                            // OBJECTIDを指定
+                            QueryFilter queryFilter = new QueryFilter
                             {
-                                // 選択したフィーチャのフィールドを取得
-                                foreach (var fld in anyRow.GetFields().Where(fld => fld.FieldType != FieldType.Geometry))
+                                WhereClause = "ObjectId =" + feature.GetObjectIDs().First(),
+                            };
+
+                            // 複数選択した場合は最初に取得したアノテーションの角度を使用する
+                            using (RowCursor rowCursor = table.Search(queryFilter))
+                            {
+                                rowCursor.MoveNext();
+                                using (Row row = rowCursor.Current)
                                 {
-                                    listColumnNames.Add(new KeyValuePair<string, string>(fld.Name, fld.AliasName));
+                                    // 角度取得
+                                    Angle = Convert.ToDouble(row["Angle"]);
                                 }
                             }
-                            // 選択したフィーチャの属性を取得
-                            var newRow = new List<string>();
-                            foreach (var fld in anyRow.GetFields().Where(fld => fld.FieldType != FieldType.Geometry))
+                        }
+                    }
+                });
+            }
+            else
+            {
+                QueuedTask.Run(() =>
+                {
+                    // レイヤーを選択していない場合
+                    if (_selectedFeatureLayer == null)
+                        return;
+
+                    try
+                    {
+                        var listColumnNames = new List<KeyValuePair<string, string>>();
+                        var listValues = new List<List<string>>();
+
+                        // 選択したフィーチャを処理する
+                        using (var rowCursor = _selectedFeatureLayer.GetSelection().Search(null))
+                        {
+                            bool bDefineColumns = true;
+                            while (rowCursor.MoveNext())
                             {
-                                newRow.Add((anyRow[fld.Name] == null) ? string.Empty : anyRow[fld.Name].ToString());
+                                var anyRow = rowCursor.Current;
+                                if (bDefineColumns)
+                                {
+                                    // 選択したフィーチャのフィールドを取得
+                                    foreach (var fld in anyRow.GetFields().Where(fld => fld.FieldType != FieldType.Geometry))
+                                    {
+                                        listColumnNames.Add(new KeyValuePair<string, string>(fld.Name, fld.AliasName));
+                                    }
+                                }
+                                // 選択したフィーチャの属性を取得
+                                var newRow = new List<string>();
+                                foreach (var fld in anyRow.GetFields().Where(fld => fld.FieldType != FieldType.Geometry))
+                                {
+                                    newRow.Add((anyRow[fld.Name] == null) ? string.Empty : anyRow[fld.Name].ToString());
+                                }
+                                listValues.Add(newRow);
+                                bDefineColumns = false;
                             }
-                            listValues.Add(newRow);
-                            bDefineColumns = false;
+
                         }
 
-                    }
+                        // DataGridにカラムを設定
+                        SelectedFeatureDataTable = new DataTable();
+                        foreach (var col in listColumnNames)
+                        {
+                            SelectedFeatureDataTable.Columns.Add(new DataColumn(col.Key, typeof(string)) { Caption = col.Value });
+                        }
 
-                    // DataGridにカラムを設定
-                    SelectedFeatureDataTable = new DataTable();
-                    foreach (var col in listColumnNames)
+                        // DataGridに選択したフィーチャの属性を格納
+                        foreach (var row in listValues)
+                        {
+                            var newRow = SelectedFeatureDataTable.NewRow();
+                            newRow.ItemArray = row.ToArray();
+                            SelectedFeatureDataTable.Rows.Add(newRow);
+                        }
+
+                        if (_selectedFeatureDataTable.Rows.Count > 0)
+                        {
+                            // ズーム
+                            ZoomToSelection();
+                        }
+
+                        // データが多い場合たまにDataGridにデータが表示されないことがある。これで回避。
+                        NotifyPropertyChanged(() => SelectedFeatureDataTable);
+
+                    }
+                    catch (Exception)
                     {
-                        SelectedFeatureDataTable.Columns.Add(new DataColumn(col.Key, typeof(string)) { Caption = col.Value });
+                        MessageBox.Show("フィーチャ属性の抽出に失敗しました。");
                     }
+                });
 
-                    // DataGridに選択したフィーチャの属性を格納
-                    foreach (var row in listValues)
-                    {
-                        var newRow = SelectedFeatureDataTable.NewRow();
-                        newRow.ItemArray = row.ToArray();
-                        SelectedFeatureDataTable.Rows.Add(newRow);
-                    }
+            }
 
-                    if (_selectedFeatureDataTable.Rows.Count > 0)
-                    {
-                        // ズーム
-                        ZoomToSelection();
-                    }
-
-                    // データが多い場合たまにDataGridにデータが表示されないことがある。これで回避。
-                    NotifyPropertyChanged(() => SelectedFeatureDataTable);
-
-                }
-                catch (Exception)
-                {
-                    MessageBox.Show("フィーチャ属性の抽出に失敗しました。");
-                }
-            });
         }
         #endregion
 
