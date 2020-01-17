@@ -89,6 +89,11 @@ namespace AddInSamples
             // アノテーション タブのコピーボタンを押すと ExecuteCopyAnnotation() が実行される
             _copyAnnotation = new RelayCommand(() => ExecuteCopyAnnotation(), () => true);
 
+            // ジオメトリ操作 [開く]を押すとアイテム選択ダイアログが表示される
+            _openGdbCmd = new RelayCommand(() => OpenGdbDialog(), () => true);
+            // 選択したポリゴンまたはラインにポイントを発生させるジオメトリ処理を行う
+            _createPoint = new RelayCommand(() => ExecuteCreatePoint(), () => true);
+
             // イベントの登録
             ActiveMapViewChangedEvent.Subscribe(OnActiveMapViewChanged);
             LayersAddedEvent.Subscribe(OnLayerAdded);
@@ -597,6 +602,273 @@ namespace AddInSamples
         }
         #endregion
 
+        #region バインド用のプロパティ：特定タイプのジオメトリ選択（ジオメトリ変換）
+        /// <summary>
+        /// 特定のジオメトリタイプのみをコンボボックスに表示するための
+        /// </summary>
+        private ObservableCollection<FeatureLayer> _polygonAndLineLayers = new ObservableCollection<FeatureLayer>();
+
+        public ObservableCollection<FeatureLayer> PolygonAndLineLayers
+        {
+            get { return _polygonAndLineLayers; }
+            set
+            {
+                SetProperty(ref _polygonAndLineLayers, value, () => PolygonAndLineLayers);
+            }
+        }
+
+        private FeatureLayer _selectedPolygonAndLineLayer;
+
+        public FeatureLayer SelectedPolygonAndLineLayer
+        {
+            get { return _selectedPolygonAndLineLayer; }
+            set
+            {
+                SetProperty(ref _selectedPolygonAndLineLayer, value, () => SelectedPolygonAndLineLayer);
+            }
+        }
+        #endregion
+
+        #region バインド用のプロパティ：ファイルパス（ジオメトリの変換）
+        /// <summary>
+        /// テキスト ボックスに格納されるファイルパス
+        /// </summary>
+        private string _gdbPath = string.Empty;
+        public string GdbPath
+        {
+            get { return _gdbPath; }
+            set
+            {
+                SetProperty(ref _gdbPath, value, () => GdbPath);
+            }
+        }
+
+
+        #endregion
+
+        #region ダイアログ表示・fgdb指定処理（ジオメトリ変換）
+        /// <summary>
+        /// テキスト ボックスに格納されるパス
+        /// </summary>
+        private ICommand _openGdbCmd;
+        public ICommand OpenGdbCmd => _openGdbCmd;
+        private void OpenGdbDialog()
+        {
+            OpenItemDialog searchGdbDialog = new OpenItemDialog
+            {
+                Title = "ファイルジオデータベースを選択",
+                MultiSelect = false,
+                Filter = ItemFilters.geodatabases
+            };
+
+            var ok = searchGdbDialog.ShowDialog();
+            if (ok != true)
+                return;
+
+            var selectedItems = searchGdbDialog.Items;
+            foreach (var selectedItem in selectedItems)
+                GdbPath = selectedItem.Path;
+        }
+        #endregion
+
+        #region バインド用のプロパティ：レイヤーオブジェクト（ジオメトリ変換）
+        /// <summary>
+        /// レイヤーオブジェクト：指定フィーチャクラス名称
+        /// </summary>
+        private string _featureClassName;
+
+        public string FeatureClassName
+        {
+            get { return _featureClassName; }
+            set
+            {
+                SetProperty(ref _featureClassName, value, () => FeatureClassName);
+            }
+        }
+        #endregion
+
+        #region ポイント作成処理（ジオメトリ変換）
+        /// <summary>
+        /// テキスト ボックスに格納される
+        /// </summary>
+        private ICommand _createPoint;
+        public ICommand CreatePoint => _createPoint;
+        private async void ExecuteCreatePoint()
+        {
+
+            if (_featureClassName == null || _selectedPolygonAndLineLayer == null)
+            {
+                return;
+            }
+
+            // 既存のフィーチャクラス存在チェック
+            var check = await QueuedTask.Run(() =>
+            {
+                return FeatureClassExists(_gdbPath, _featureClassName);
+            });
+
+            if (check == true)
+            {
+                MessageBox.Show("同じ名前のフィーチャクラスが存在します。");
+                return;
+            }
+
+            var manipulatedlayer = _selectedPolygonAndLineLayer;
+
+            // フィーチャクラス作成
+            await ExecuteGeoprocessingTool("CreateFeatureclass_management", Geoprocessing.MakeValueArray(_gdbPath,
+                                                                                                         _featureClassName,
+                                                                                                         "POINT",
+                                                                                                         manipulatedlayer,
+                                                                                                         "DISABLED",
+                                                                                                         "DISABLED",
+                                                                                                         manipulatedlayer));
+            // ジオメトリ処理の実行
+            ManipulateGeometry(manipulatedlayer);
+
+        }
+        #endregion
+
+        #region 作成元レイヤーの存在検査（ジオメトリ変換）
+        /// <summary>
+        /// 指定されたファイルジオデータベースに同名称既存のレイヤーの存在を検査する
+        /// </summary>
+        public bool FeatureClassExists(string geodatabase, string featureClassName)
+        {
+            try
+            {
+                var fileGDBpath = new FileGeodatabaseConnectionPath(new Uri(geodatabase));
+
+                using (Geodatabase gdb = new Geodatabase(fileGDBpath))
+                {
+                    FeatureClassDefinition featureClassDefinition = gdb.GetDefinition<FeatureClassDefinition>(featureClassName);
+                    featureClassDefinition.Dispose();
+                    return true;
+                }
+
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region ジオプロセシング処理の実行：新規フィーチャクラスの作成（ジオメトリ変換）
+        /// <summary>
+        /// テキスト ボックスに格納される
+        /// </summary>
+        private async Task ExecuteGeoprocessingTool(string tool, IReadOnlyList<string> parameters)
+        {
+            await Geoprocessing.ExecuteToolAsync(tool, parameters);
+        }
+        #endregion
+
+        #region ジオプロセシング処理の実行：ポイント作成（ジオメトリ変換）
+        /// <summary>
+        /// テキスト ボックスに格納される
+        /// </summary>
+        private void ManipulateGeometry(FeatureLayer manipulatedlayer)
+        {
+            QueuedTask.Run(() =>
+            {
+                var fileGDBpath = new FileGeodatabaseConnectionPath(new Uri(_gdbPath));
+                using (Geodatabase geodatabase = new Geodatabase(fileGDBpath))
+                {
+                    // フィーチャクラスを取得する
+                    using (FeatureClass featureClass = geodatabase.OpenDataset<FeatureClass>(_featureClassName))
+                    {
+                        using (var rowCursor = manipulatedlayer.Search(null))
+                        {
+                            var editOperation = new EditOperation();
+
+                            if (manipulatedlayer.GetFeatureClass().GetDefinition().GetShapeType().ToString() == "Polygon")
+                            {
+                                while (rowCursor.MoveNext())
+                                {
+                                    using (var row = rowCursor.Current)
+                                    {
+                                        Feature feature = row as Feature;
+                                        Geometry shape = feature.GetShape();
+
+                                        MapPoint mapPoint = GeometryEngine.Instance.Centroid(shape);
+
+                                        //レイヤーのフィーチャクラスの Shape フィールドを取得
+                                        string shapeField = featureClass.GetDefinition().GetShapeField();
+
+                                        var attributes = new Dictionary<string, object>();
+                                        attributes.Add(shapeField, mapPoint);
+
+                                        //ジオメトリの属性値設定
+                                        foreach (var fld in row.GetFields().Where(fld => fld.FieldType != FieldType.Geometry && fld.FieldType != FieldType.OID && fld.Name != "Shape_Length" && fld.Name != "Shape_Area"))
+                                        {
+                                            attributes.Add(fld.Name, row[fld.Name]);
+                                        }
+
+                                        //フィーチャの作成と編集実行
+                                        editOperation.Create(featureClass, attributes);
+                                    }
+
+                                }
+                            }
+                            else if (manipulatedlayer.GetFeatureClass().GetDefinition().GetShapeType().ToString() == "Polyline")
+                            {
+                                while (rowCursor.MoveNext())
+                                {
+                                    using (var row = rowCursor.Current)
+                                    {
+                                        Feature feature = row as Feature;
+                                        Polyline polyline = feature.GetShape() as Polyline;
+                                        ReadOnlyPointCollection pts = polyline.Points;
+
+                                        var mapPointBuilder = new MapPointBuilder(manipulatedlayer.GetSpatialReference());
+                                        mapPointBuilder.X = pts.First().X;
+                                        mapPointBuilder.Y = pts.First().Y;
+                                        MapPoint firstMapPoint = mapPointBuilder.ToGeometry();
+
+                                        mapPointBuilder.X = pts.Last().X;
+                                        mapPointBuilder.Y = pts.Last().Y;
+                                        MapPoint lastMapPoint = mapPointBuilder.ToGeometry();
+
+                                        //レイヤーのフィーチャクラスの Shape フィールドを取得
+                                        string shapeField = featureClass.GetDefinition().GetShapeField();
+
+                                        var firstAttributes = new Dictionary<string, object>();
+                                        firstAttributes.Add(shapeField, firstMapPoint);
+
+                                        var lastAttributes = new Dictionary<string, object>();
+                                        lastAttributes.Add(shapeField, lastMapPoint);
+
+                                        //ジオメトリの属性値設定
+                                        foreach (var fld in row.GetFields().Where(fld => fld.FieldType != FieldType.Geometry && fld.FieldType != FieldType.OID && fld.Name != "Shape_Length" && fld.Name != "Shape_Area"))
+                                        {
+                                            firstAttributes.Add(fld.Name, row[fld.Name]);
+                                            lastAttributes.Add(fld.Name, row[fld.Name]);
+                                        }
+
+                                        editOperation.Create(featureClass, firstAttributes);
+                                        editOperation.Create(featureClass, lastAttributes);
+
+                                    }
+
+                                }
+
+                            }
+
+                            editOperation.Execute();
+                        }
+                    }
+                }
+            });
+        }
+        #endregion
+
+        private void OnLayerChanged(LayerEventsArgs args)
+        {
+            GetLayers();
+            SelectedFeatureDataTable = null;
+        }
+
         #region イベントハンドラー
         /// <summary>
         /// レイヤーがマップに追加された場合に発生
@@ -781,6 +1053,12 @@ namespace AddInSamples
             FeatureLayers.Clear();
             RenderingLayers.Clear();
 
+            // ジオメトリ操作add
+            PolygonAndLineLayers.Clear();
+            // ジオメトリ操作add
+
+
+
             // レイヤーコンボボックスにレイヤーを格納
             foreach (var featureLayer in mapView.Map.Layers.OfType<BasicFeatureLayer>())
             {
@@ -792,7 +1070,13 @@ namespace AddInSamples
             RenderingLayers.Clear();
             foreach (var renderingLayer in renderingLayers.Where(f => f.GetType().Name != "AnnotationLayer")) RenderingLayers.Add(renderingLayer as FeatureLayer);
 
+            // ジオメトリ変換：ポリゴン・ラインレイヤーのみをコンボボックスに格納
+            var polygonAndLineLayers = mapView.Map.Layers.OfType<FeatureLayer>().Where(f => f.ShapeType == esriGeometryType.esriGeometryPolygon || f.ShapeType == esriGeometryType.esriGeometryPolyline);
+            PolygonAndLineLayers.Clear();
+            foreach (var polygonAndLineLayer in polygonAndLineLayers) PolygonAndLineLayers.Add(polygonAndLineLayer);
+
         }
+
 
         /// <summary>
         /// DataGridと選択しているフィーチャのクリア処理
