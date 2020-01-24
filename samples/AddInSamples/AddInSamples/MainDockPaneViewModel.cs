@@ -695,8 +695,7 @@ namespace AddInSamples
         public ICommand CreatePoint => _createPoint;
         private async void ExecuteCreatePoint()
         {
-
-            if (_featureClassName == null || _selectedPolygonAndLineLayer == null)
+            if (_featureClassName == null || _featureClassName  == "" || _selectedPolygonAndLineLayer == null)
             {
                 return;
             }
