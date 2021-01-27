@@ -24,7 +24,7 @@ ArcGIS Pro SDK for .NET のサンプル集です。
 * Visual Studio 2017 (Professional, Enterprise, and Community Editions)
 
 ## ArcGIS Pro SDK for .NET の基本操作
-*  [アドイン作成の基本手順](https://github.com/EsriJapan/arcgis-samples-pro-sdk/wiki/%E3%82%A2%E3%83%89%E3%82%A4%E3%83%B3%E4%BD%9C%E6%88%90%E3%81%AE%E5%9F%BA%E6%9C%AC%E6%89%8B%E9%A0%86)
+*  [アドイン作成の基本手順](https://github.com/EsriJapan/arcgis-pro-sdk/wiki/ProGuide-Build-Your-First-Add-in)
 
 ## リソース
 
