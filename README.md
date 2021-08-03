@@ -18,6 +18,7 @@ ArcGIS Pro SDK for .NET のサンプル集です。
 * [ArcGIS Pro SDK コンセプト](https://github.com/EsriJapan/arcgis-pro-sdk/wiki)
 * [ArcGIS Pro API リファレンス](http://pro.arcgis.com/en/pro-app/sdk/api-reference/#topic1.html)
 * [ArcGIS Pro SDK コミュニティ サンプル](https://github.com/Esri/arcgis-pro-sdk-community-samples)
+* [ArcGIS Pro SDK チュートリアル](https://developers.arcgis.com/documentation/arcgis-add-ins-and-automation/arcgis-pro/#tutorials)
 
 ## ライセンス
 

@@ -1,6 +1,6 @@
-## 構成管理画面のカスタマイズ
+# 構成管理画面のカスタマイズ
 
- <img src="https://community.esri.com/servlet/JiveServlet/showImage/102-12651-11-426578/proCustom.gif" width="600px" >
+## 概要
 
 このサンプルは、ArcGIS Pro を起動したときに表示される次の 2 つの画面について実装しています。
 * スプラッシュ スクリーン画面：タイトル文字列と画像の変更
@@ -10,13 +10,13 @@
 
 * ArcGIS Pro 2.4
 
-### 実装解説
+## 実装解説
 
 次のブログで詳しく解説しています。
 
 * [Pro SDK を使用した ArcGIS Pro の拡張⑤：管理構成画面のカスタマイズ](https://community.esri.com/docs/DOC-12651)
 
-### 設定
+## 設定
 
 ArcGIS Pro 起動パスと、参照パッケージの設定を行う必要があります。
 
@@ -28,7 +28,7 @@ ArcGIS Pro 起動パスと、参照パッケージの設定を行う必要があります。
 ArcGIS Pro の exe ファイルの指定も指定先が合っているか確認します。プロジェクトのプロパティを展開して、[デバッグ] 内を表示すると、ArcGIS Pro no
 実行ファイル参照先が定義されています。
 
-### 関連ブログ
+## 関連ブログ
 
 Pro SDK を使用した ArcGIS Pro の拡張 シリーズ ブログ
 * [Pro SDK を使用した ArcGIS Pro の拡張①：ArcGIS Pro SDK とは?](https://community.esri.com/docs/DOC-11507)
