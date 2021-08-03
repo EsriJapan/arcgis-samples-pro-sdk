@@ -2,37 +2,25 @@
 
 ArcGIS Pro SDK for .NET のサンプル集です。
 
-## 使用している製品・プロジェクト
+## 動作確認環境
 
-* [ArcGIS Pro](http://www.esrij.com/products/arcgis-pro/)
-* [ArcGIS Pro SDK for .NET](http://pro.arcgis.com/ja/pro-app/sdk/)
-
-## 動作環境
-### ArcGIS Pro
-* ArcGIS Pro 2.4
-
-### OS
-* Windows 10 Home, Pro, Enterprise and Education (64 bit [EM64T])
-* Windows 8.1 Basic, Professional, and Enterprise (64 bit [EM64T])
-* Windows 7 SP1 Ultimate, Enterprise, Professional, and Home Premium (64 bit [EM64T])
-
-### .NET Framework
-* Microsoft .NET Framework 4.6.1以上
-
-### 開発環境
-* Visual Studio 2019 (Professional, Enterprise, and Community Editions)
-* Visual Studio 2017 (Professional, Enterprise, and Community Editions)
+* 各サンプル リポジトリを参照してください。
 
 ## ArcGIS Pro SDK for .NET の基本操作
-*  [アドイン作成の基本手順](https://github.com/EsriJapan/arcgis-pro-sdk/wiki/ProGuide-Build-Your-First-Add-in)
+
+* [ArcGIS Pro SDK for .NET のインストール](https://github.com/EsriJapan/arcgis-pro-sdk/wiki/ProGuide-Installation-and-Upgrade)
+* [アドイン作成の基本手順](https://github.com/EsriJapan/arcgis-pro-sdk/wiki/ProGuide-Build-Your-First-Add-in)
 
 ## リソース
 
-* [ArcGIS Pro SDK コンセプト](https://github.com/Esri/arcgis-pro-sdk)
+* [ArcGIS Pro](http://www.esrij.com/products/arcgis-pro/)
+* [ArcGIS Pro SDK for .NET](http://pro.arcgis.com/ja/pro-app/sdk/)
+* [ArcGIS Pro SDK コンセプト](https://github.com/EsriJapan/arcgis-pro-sdk/wiki)
 * [ArcGIS Pro API リファレンス](http://pro.arcgis.com/en/pro-app/sdk/api-reference/#topic1.html)
 * [ArcGIS Pro SDK コミュニティ サンプル](https://github.com/Esri/arcgis-pro-sdk-community-samples)
 
 ## ライセンス
+
 Copyright 2015 Esri Japan Corporation.
 
 Apache License Version 2.0（「本ライセンス」）に基づいてライセンスされます。あなたがこのファイルを使用するためには、本ライセンスに従わなければなりません。本ライセンスのコピーは下記の場所から入手できます。
